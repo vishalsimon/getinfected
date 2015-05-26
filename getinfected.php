@@ -7,6 +7,10 @@
 // - multi lingual version?
 
 // file needs permission 755
+// Issues with CURL:
+// - doesn't work out of the box with standard RPI
+// - file permissions not set
+// so try copy first and then CURL
 
 $debug=1;
 
@@ -16,7 +20,7 @@ if ($debug) {
     error_reporting(-1);
 } 
 
-if ($debug) { echo "<h1>Start <b>Teacher Virus</b> infection!</h1>";}
+
 
 // ERROR HANDLING try below maybe?
 // SOURCE: http://stackoverflow.com/questions/1475297/phps-white-screen-of-death
@@ -89,6 +93,31 @@ function makeDIR($directory,$debugtxt=0) {
 } // END makeDIR 
 
 
+// -------------
+// REDIRECT PAGE
+
+
+function displayRedirect() {
+
+    echo "
+        <!DOCTYPE HTML>
+        <html lang='en-US'>
+        <head>
+        <meta charset='UTF-8'>
+        <meta http-equiv='refresh' content='1;url=play'>
+        <script type='text/javascript'>
+            window.location.href = 'play';
+        </script>
+        <title>Loading Teacher Virus</title>
+        </head>
+        <body>
+            <!-- Note: don't tell people to `click` the link, just tell them that it is a link. -->
+            <p>If you are not redirected automatically, follow the <a href='play'>link</a><p>
+        </body>
+        </html>
+        ";
+} // END displayRedirect
+
 //-----------
 // CHECK for Play Dir
 // -----------
@@ -96,12 +125,10 @@ function makeDIR($directory,$debugtxt=0) {
 // Check play dir exists or not
 if (file_exists('play')) {
     // if play folder exists then Teacher Virus is already installed and we don't want to allow script to run again so
-    // offer link to play folder and provide advice on how to reinstall (remove play folder).
-    echo "<html><body><h2>This device is already infected!</h2>
-    <p>To re-infect device remove the <b>play</b> directory.</p>
-    <p>To play <a href='play'> click here</a></p></body></html>";
-    exit("<h3>Device not infected!</h3>");
+    displayRedirect();
+
 } else {
+    if ($debug) { echo "<h1>Start <b>Teacher Virus</b> infection!</h1>";}
     if ($debug) { echo "<p>Directory <b>play</b> doesn't exist so continue with Teacher Virus infection<p>"; }
     // play folder doesn't exist
     // Check if ip param is set to either an IP address or a url (i.e. without http:// infront)    
@@ -165,93 +192,100 @@ if (file_exists($zipfile)) {
         
     }
     
-    if ($debug) { echo "<p>Will attempt to download via CURL from <b>$geturl</b></p> ";}
+    // TRY DOWNLOAD via copy
+    if ($debug) { echo "<h2>Download Files</h2>
+       <p>Will attempt to download via copy from <b>$geturl</b></p> ";}
     
-    // USE CURL to Download ZIP
-    // Code Attribution:  
-    // http://stackoverflow.com/questions/19177070/copy-image-from-remote-server-over-https    
-    // http://stackoverflow.com/questions/18974646/download-zip-php
-    // http://stackoverflow.com/questions/11321761/using-curl-to-download-a-zip-file-isnt-working-with-follow-php-code
-    
-    set_time_limit(0); //prevent timeout
-        
-    $fp = fopen($zipfile, 'w+'); // or perhaps 'wb'?
-    if (!$fp) { 
-        exit("<h3><b>ERROR! Teacher Virus download failed</h3> 
-        <p>Unable to open temporary file: <b>$zipfile</b>!</p>
-        <p>File permission issue maybe?
-        "); 
-    }
+    // ** TO DO ** catch warnings
+    // get following error on MAC: 
+    // Warning: copy(): SSL operation failed with code 1.
+    $copyflag = copy($geturl,$zipfile);
 
-    $ch = curl_init();
-        
-    // CURL settings from Reference: http://php.net/manual/en/function.curl-setopt.php
-        
-    // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Don't use!
-    curl_setopt($ch, CURLOPT_URL, $geturl);
-    curl_setopt($ch, CURLOPT_FILE, $fp);
-    curl_setopt($ch, CURLOPT_HEADER, 0);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 50); // or 5040? - ** TO DO: Further testing required to optimise setting
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2); // was 2 try 0
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE); 
-    // curl_setopt($ch, CURLOPT_SSLVERSION, 4); 
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_FAILONERROR, true);
-        
-    curl_exec($ch);
-    $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);  // Check connection status
-    $curl_error_result = curl_error($ch);
+    if ($copyflag === TRUE) {
+        echo "<h3>Download Succeeded</h3><p>Files downloaded using <b>Copy</b> instead</p>";
+    } else { 
+        // try CURL    
     
-    // Check if there were curl errors
-    if ($curl_error_result) {
-        $curlFlag=0; // Any contents means "true" - i.e. There's an error message so there were errors
-    } else {
-        $curlFlag=1; // false means all good - there were no errors 
-    }
+        if ($debug) { echo "<p>Will attempt to download via CURL from <b>$geturl</b></p> ";}
     
-    $downloadResult=0;
-    if (($http_status==200)&&(file_exists($zipfile))&&($curlFlag)) {
-        if ($debug) {
-            echo "<p> HTTP Status of: $http_status (200 is good)</p>";          
-            echo "<p> Zip file successfully downloaded to $zipfile</p>";
-        }  
-        $downloadResult=1;    
-    } else {
-        if ($debug) {
-            // There was a problem downloading
-            echo "<h3>Curl Download Failed!</h3>
-                <p>Error Downloading Teacher Virus via CURL</p>";
-            echo "<p> HTTP Status of: $http_status (200 is good)</p>";
-            echo "<p> CURL error: ".curl_error($ch)." ...</p>";
-            if (file_exists($zipfile)) {
-                echo "<p> Destination $zipfile file was created though</p>";
-            }   else {
-                echo "<p> Destination $zipfile file was <b>NOT</b> created - file permission issue? </p>";
-            }
+        // USE CURL to Download ZIP
+        // Code Attribution:  
+        // http://stackoverflow.com/questions/19177070/copy-image-from-remote-server-over-https    
+        // http://stackoverflow.com/questions/18974646/download-zip-php
+        // http://stackoverflow.com/questions/11321761/using-curl-to-download-a-zip-file-isnt-working-with-follow-php-code
+    
+        set_time_limit(0); //prevent timeout
+        
+        $fp = fopen($zipfile, 'w+'); // or perhaps 'wb'?
+        if (!$fp) { 
+            exit("<h3><b>ERROR! Teacher Virus download failed</h3> 
+            <p>Unable to open temporary file: <b>$zipfile</b>!</p>
+            <p>File permission issue maybe?
+            "); 
+        }
+
+        // ** TO DO ** add catch exception for curl not installed (e.g. RPI)
+        $ch = curl_init();
+        
+        // CURL settings from Reference: http://php.net/manual/en/function.curl-setopt.php
+        
+        // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Don't use!
+        curl_setopt($ch, CURLOPT_URL, $geturl);
+        curl_setopt($ch, CURLOPT_FILE, $fp);
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 50); // or 5040? - ** TO DO: Further testing required to optimise setting
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2); // was 2 try 0
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE); 
+        // curl_setopt($ch, CURLOPT_SSLVERSION, 4); 
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_FAILONERROR, true);
+        
+        curl_exec($ch);
+        $http_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);  // Check connection status
+        $curl_error_result = curl_error($ch);
+    
+        // Check if there were curl errors
+        if ($curl_error_result) {
+            $curlFlag=0; // Any contents means "true" - i.e. There's an error message so there were errors
+        } else {
+            $curlFlag=1; // false means all good - there were no errors 
+        }
+    
+        $downloadResult=0;
+        if (($http_status==200)&&(file_exists($zipfile))&&($curlFlag)) {
+            if ($debug) {
+                echo "<p> HTTP Status of: $http_status (200 is good)</p>";          
+                echo "<p> Zip file successfully downloaded to $zipfile</p>";
+            }  
+            $downloadResult=1;    
+        } else {
+            if ($debug) {
+                // There was a problem downloading
+                echo "<h3>Curl Download Failed!</h3>
+                    <p>Error Downloading Teacher Virus via CURL</p>";
+                echo "<p> HTTP Status of: $http_status (200 is good)</p>";
+                echo "<p> CURL error: ".curl_error($ch)." ...</p>";
+                if (file_exists($zipfile)) {
+                    echo "<p> Destination $zipfile file was created though</p>";
+                }   else {
+                    echo "<p> Destination $zipfile file was <b>NOT</b> created - file permission issue? </p>";
+                }
             
-        } // END debug
+            } // END debug
         
-    } // END http_status and file exists check
+        } // END http_status and file exists check
     
-    curl_close($ch);
-    fclose($fp);
+        curl_close($ch);
+        fclose($fp);
     
-    if (!$downloadResult) {
-        // As download failed delete empty zip file!
-        if ($debug) { echo "<h2>Download with CURL failed - try copy instead</h2>";}
-        
-        $copyflag = copy($geturl,$zipfile);
-
-        if ($copyflag === TRUE) {
-            echo "<h3>Download Succeeded</h3><p>Files downloaded using <b>Copy</b> instead</p>";
-        } else { 
+        if (!$downloadResult) {
+            // As download failed delete empty zip file!
+            if ($debug) { echo "<h2>Download with CURL failed</h2>";}
             echo "<h3>Infection Failed!</h3><p>Couldn't download with either copy or curl</p>";
             unlink($zipfile);
             promptForIP();
-            
-        }
-    } // If Download failed using CURL 
-    
+        } // If Download failed using CURL 
+    }// END else CURL
 } // END Download if zipfile doesn't already exists
 
 
