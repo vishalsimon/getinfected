@@ -223,9 +223,6 @@ $infectdir = $infect.'/'; // infect directory with trailing slash for URL use
 
 $zipfile = $infectdir.$download_filename;
 
-// Check for IP param and set $ip if param provided
-// ** TO DO **
-
 // Download file if OATSEA-teachervirus.zip doesn't already exist
 if (file_exists($zipfile)) {
     if ($debug) { 
