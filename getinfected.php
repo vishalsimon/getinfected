@@ -20,8 +20,6 @@ if ($debug) {
     error_reporting(-1);
 } 
 
-
-
 // ERROR HANDLING try below maybe?
 // SOURCE: http://stackoverflow.com/questions/1475297/phps-white-screen-of-death
 
@@ -92,6 +90,64 @@ function makeDIR($directory,$debugtxt=0) {
     return $result;
 } // END makeDIR 
 
+
+//---------
+// Move Directory
+
+function moveDIR($dir,$dest="") {
+    $debug = 1;
+    $result=true;
+    
+    if($debug) { echo "<h2>Moving directory</h2><p> From:<br> $dir <br>To: $dest</p>";}
+
+    $path = dirname(__FILE__);
+    $files = scandir($dir);
+    
+    foreach($files as $file) {
+        if (substr( $file ,0,1) != ".") {
+            $pathFile = $dir.'/'.$file;
+            if (is_dir($pathFile)) {
+                if($debug) { echo "<p><b>Directory:</b> $pathFile</p>"; }
+
+                $newDir = $dest."/".$file;
+                
+                if (!moveDIR($pathFile,$newDir)) {
+                    $result = false;
+                }
+                
+            } else {
+                echo "<p>$pathFile is a file</p>";
+ 
+                // $currentFile = realpath($file); // current location
+                $currentFile = $pathFile;
+
+                $newFile = $dest."/".$file;
+    
+                if (!file_exists($dest)) {
+                    makeDIR($dest);
+                }
+                // if file already exists remove it
+                if (file_exists($newFile)) {
+                    if($debug) { echo "<p>File $newFile already exists - Deleting</p>"; }
+                    unlink($newFile);
+                } else {
+                    if($debug) { echo "<p>File $newFile doesn't exist yet</p>"; }
+                }
+        
+                // Move via rename
+                // rename(oldname, newname)
+                if (rename($currentFile , $newFile)) {
+                    if($debug) { echo "<p>Moved $currentFile to $newFile</p>"; }
+                } else {
+                    if($debug) { echo "<p>Failed to move $currentFile to $newFile</p>"; }
+                    $result = false;
+                } // END rename 
+                
+            } // END if dir or file
+        } // end if no dot
+    } // END foreach
+    return $result;
+} // END moveDIR
 
 // -------------
 // REDIRECT PAGE
@@ -430,8 +486,19 @@ if ($debug) {echo "<p>Loop Count: $tally2</p>";}
 // IF Tally2 is zero then move failed try alternative method based on scandir
 
 if ($tally2==0) {
-    echo "<h2>File Move Failed!</h2><p> - Attempting alternative approach</p>";
-}
+    if($debug) { echo "<h2>File Move Failed!</h2><p> - Attempting alternative approach</p>"; }
+
+    $destination  = dirname(__FILE__);
+
+    // if($debug) { echo "<p>Moving files from<br>  $subfolder <br> to: $destination</p>"; }
+
+    if (moveDIR($subfolder,$destination)) {
+        if($debug) { echo "<h2>Move Succeeded!</h2>"; }
+    } else {
+        if($debug) { "<h2>ERROR! Move Failed!</h2><p>Infection Failed</p>"; }
+    } // End moveDIR check
+    
+} // END try alternative move approach
 
 // DELETE TEMP     
 // Recursively Delete temporary unzip location
@@ -441,6 +508,6 @@ rrmdir($temp_unzip_path);
 // ** TO DO ***
 
 // current test stub instead of admin page opens in new window:
-if ($debug) {echo '<p>Check infection has worked: <a href="admin" target="_blank">Click Here for Admin Page</a></p>';}
+if ($debug) {echo '<h2>Infection Complete!</h2><p>Check infection has worked: </p><p><a href="admin" target="_blank">Click Here for Admin Page</a></p><p>or</p><p><a href="play" target="_blank">Click Here for PLAY Page</a></p>';}
 
 ?>
