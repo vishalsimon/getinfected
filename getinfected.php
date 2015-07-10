@@ -11,6 +11,7 @@
 // - doesn't work out of the box with standard RPI
 // - file permissions not set
 // so try copy first and then CURL
+//Edited by Vishal for testing
 
 $debug=1;
 
